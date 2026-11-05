@@ -1,0 +1,10 @@
+[workspace]
+members = [
+    "agent",
+    "crates/sec_domain",
+    "crates/sec_storage",
+    "crates/sec_binance",
+    "crates/sec_cli",
+    "sec_solana"
+]
+resolver = "2"

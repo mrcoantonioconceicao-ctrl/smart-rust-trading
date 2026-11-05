@@ -1,0 +1,11 @@
+[package]
+name = "agent"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+tokio = { version = "1.0", features = ["full"] }
+chrono = { version = "0.4", features = ["serde"] }
+sec_storage = { path = "../crates/sec_storage" }
+sec_domain = { path = "../crates/sec_domain" }
+sec_binance = { path = "../crates/sec_binance" }

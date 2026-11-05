@@ -1,0 +1,16 @@
+[package]
+name = "sec_cli"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+clap = { version = "4.0", features = ["derive"] }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+chrono = { version = "0.4", features = ["serde"] }
+tokio = { version = "1.0", features = ["full"] }
+sec_crypto = { path = "../sec_crypto" }
+sec_storage = { path = "../sec_storage" }
+sec_domain = { path = "../sec_domain" }
+sec_mcp_server = { path = "../sec_mcp_server" }
+sec_binance = { path = "../sec_binance" }

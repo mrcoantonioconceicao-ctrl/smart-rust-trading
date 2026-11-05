@@ -1,0 +1,36 @@
+nohup: ignoring input
+warning: unused import: `std::fs`
+ --> agent/src/main.rs:4:5
+  |
+4 | use std::fs;
+  |     ^^^^^^^
+  |
+  = note: `#[warn(unused_imports)]` (part of `#[warn(unused)]`) on by default
+
+warning: `agent` (bin "agent") generated 1 warning (run `cargo fix --bin "agent" -p agent` to apply 1 suggestion)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 1.28s
+     Running `target/debug/agent`
+🤖 Smart Rust Trading — Agente Nolan Iniciado com Sucesso!
+🛡️ Blindagem de Segurança: DDD, SOA, LGPD, MCP/Llama & Criptografia AES-256-GCM ativa.
+
+--- [NOLAN] Ciclo de Análise #1: A verificar mercado e feeds de segurança ---
+[SEC-VAULT] Saldo atual no cofre principal: $50.00 USD
+[BINANCE] Preço de SOL/USDT obtido: $96.10 USD
+[SEC-GUARD-WARN] Ameaça bloqueada: [SEC-ALERT] Símbolo de mercado não autorizado.
+
+--- [NOLAN] Ciclo de Análise #2: A verificar mercado e feeds de segurança ---
+[SEC-VAULT] Saldo atual no cofre principal: $50.00 USD
+[BINANCE] Preço de SOL/USDT obtido: $96.08 USD
+[SEC-GUARD-WARN] Ameaça bloqueada: [SEC-ALERT] Símbolo de mercado não autorizado.
+
+--- [NOLAN] Ciclo de Análise #3: A verificar mercado e feeds de segurança ---
+[SEC-VAULT] Saldo atual no cofre principal: $50.00 USD
+[BINANCE] Preço de SOL/USDT obtido: $96.08 USD
+[SEC-GUARD-WARN] Ameaça bloqueada: [SEC-ALERT] Símbolo de mercado não autorizado.
+
+--- [NOLAN] Ciclo de Análise #4: A verificar mercado e feeds de segurança ---
+[SEC-VAULT] Saldo atual no cofre principal: $50.00 USD
+[BINANCE] Preço de SOL/USDT obtido: $96.07 USD
+[SEC-GUARD-WARN] Ameaça bloqueada: [SEC-ALERT] Símbolo de mercado não autorizado.
+
+--- [NOLAN] Ciclo de Análise #5: A verificar mercado e feeds de segurança ---
