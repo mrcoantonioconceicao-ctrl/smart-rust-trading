@@ -1,78 +1,46 @@
-# 🛡️ Smart Rust Trading
+# Smart Rust Trading
 
-> **Sistema de Alta Performance e Segurança para Trading CeFi Desenvolvido em Rust Puro.**  
-> *Arquitetura Modular Baseada em Domain-Driven Design (DDD), Service-Oriented Architecture (SOA) e Blindagem Criptográfica AES-256-GCM.*
-
----
-
-## 📑 Índice
-1. [Visão Geral do Ecossistema](#-visão-geral-do-ecossistema)
-2. [Arquitetura do Workspace (Cargo Workspace)](#-arquitetura-do-workspace-cargo-workspace)
-3. [Segurança e Blindagem de Dados (*Secure by Design*)](#-segurança-e-blindagem-de-dados-secure-by-design)
-4. [Agente Scout Multi-Ativo (Motor de Varredura)](#-agente-scout-multi-ativo-motor-de-varredura)
-5. [Painel de Controlo CLI](#-painel-de-controlo-cli)
-6. [Instalação e Execução](#-como-executar)
-7. [Licenciamento e Governança](#-governança)
+O Smart Rust Trading é um ecossistema autônomo, distribuído e de alta performance voltado para o trading algorítmico, desenvolvido integralmente em linguagem Rust. Projetado para operar com eficiência e segurança em ambientes restritos, como o Termux no Android, o projeto une inteligência de mercado orientada por agentes autônomos a uma arquitetura de cibersegurança estrita em repouso, operando sob o princípio de zero exposição de texto em claro (Zero Plaintext).
 
 ---
 
-## 🚀 Visão Geral do Ecossistema
+## Arquitetura e Organização do Sistema
 
-O **Smart Rust Trading** foi concebido sob rigorosos padrões de engenharia de software para operar de forma totalmente autónoma, resiliente e eficiente. O ecossistema foca-se na integração CeFi com a **Binance** (via Agente Scout Multi-Ativo) em ambiente mobile otimizado (**Termux**), garantindo consumo mínimo de recursos, concorrência segura em tempo real e persistência contábil inviolável.
+O projeto é estruturado em um workspace modularizado em crates independentes, garantindo baixo acoplamento, alta coesão e testabilidade rigorosa:
+
+- **sec_crypto:** O motor criptográfico central, responsável pela derivação segura de chaves através do algoritmo Argon2id (com parâmetros rigorosos e otimizados para dispositivos móveis) e encriptação autenticada de dados baseada em AES-256-GCM.
+- **sec_storage:** O subsistema de persistência transacional responsável por cifrar, gravar e decifrar com segurança os cofres de carteiras e históricos no disco de forma isolada.
+- **sec_binance:** O conector de oráculos que consome feeds de cotações spot em tempo real a partir da API pública da Binance, monitorando ativos de alta liquidez como SOLUSDT e BTCUSDT.
+- **sec_cli:** O painel de controlo interativo em linha de comandos (CLI) e motor central que orquestra o loop de execução do Autopiloto e a auditoria do sistema.
 
 ---
 
-## 🏗️ Arquitetura do Workspace (`Cargo Workspace`)
+## O Ecossistema de Agentes
 
-O projeto está estruturado em múltiplos crates independentes para isolar responsabilidades de domínio, armazenamento, conectividade e interface:
+O ecossistema is liderado por uma arquitetura hierárquica inteligente que divide as responsabilidades operacionais:
 
-```text
-smart-rust-trading/
-├── Cargo.toml               # Configuração raiz do Workspace
-├── agent/                   # Lógica central dos Agentes de Inteligência (Nolan)
-├── crates/
-│   ├── sec_domain/          # Entidades de domínio, modelos de ordens e regras de negócio
-│   ├── sec_storage/         # Módulo de cofres e persistência cifrada (AEAD)
-│   ├── sec_binance/         # Conector CeFi e Agente Scout Multi-Ativo (REST API / Testnet)
-│   └── sec_cli/             # Painel de Controlo Interativo via Terminal
-└── sec_solana/              # Módulo Web3 / On-chain (estruturado para expansão futura)
+- **Agente Pai (Nolan):** Assume o papel de maestro contábil e operacional do sistema. Inicia com um capital base estrito de cinquenta dólares, consome os ticks do mercado em tempo real a cada ciclo de cinco segundos e gere ativamente a tomada de decisão.
+- **Matriz de Decisão Ativa:** A cada ciclo de execução, o Agente Nolan analisa o comportamento e a variação do preço para classificar o momento do mercado em três estados fundamentais:
+  - COMPRAR (BUY): Tendência de alta detetada, momento de alocação de posições.
+  - VENDER (SELL): Correção ou exaustão detetada, momento de realização de lucros e proteção do caixa.
+  - NEUTRO (NEUTRAL): Mercado lateralizado ou com ruído, mantendo a posição e preservando o capital.
+- **Sub-Agentes Táticos:** Unidades operacionais geradas de forma dinâmica e automática para expandir a capacidade de execução do ecossistema em paralelo, operando sob um teto controlado de instâncias concorrentes.
 
-Segurança e Blindagem de Dados (Secure by Design)
-​A segurança dos ativos contábeis e do histórico operacional constitui o núcleo do sistema:
-​Cifragem em Repouso: Os cofres contábeis (sec_wallet.enc, sec_orders.enc) são protegidos por criptografia simétrica autenticada AES-256-GCM.
-​Derivação de Chaves: Utilização de PBKDF2 para robustez contra ataques de força bruta.
-​Integridade Operacional: Nenhuma credencial ou saldo sensível é exposto em texto plano no sistema de ficheiros local.
-​🤖 Agente Scout Multi-Ativo (Motor de Varredura)
-​O Agente Scout (Nolan) executa ciclos de varredura paralelos e contínuos sobre uma cesta diversificada de ativos na Binance, avaliando preços em tempo real, volatilidade e spreads sob a validação do SecurityGuard:
+---
 
-AtivoPar MonitoradoFunção no Portfólio
-BitcoinBTCUSDTÂncora de Mercado e Tendência Macro
-EthereumETHUSDTLiquidez e Derivativos
-SolanaSOLUSDTAlta Frequência / Par de Rotação
-Binance CoinBNBUSDTEficiência de Taxas e CeFi
+## Regras de Negócio e Gestão de Capital
 
-📊 Painel de Controlo CLI
-​O ecossistema dispõe de uma interface de linha de comandos robusta e interativa (sec_cli) que centraliza as operações de governança:
-​Inspecionar Estado do Cofre & Saldo (Auditoria de portfólio).
-​Executar Ciclo de Análise do Agente Nolan (Varredura multi-ativo em paralelo).
-​Auditar Histórico de Ordens Cifradas (Validação AEAD).
-​Testar Validação de Segurança (SecurityGuard).
-​Consultar Preço Real na Binance (Conectividade REST API / Testnet).
-​Efetuar Reset Contábil Seguro do Cofre.
-​⚙️ Como Executar
-​Para compilar e iniciar o painel de controlo no seu ambiente de desenvolvimento:
+O fluxo financeiro do ecossistema opera sob uma arquitetura de cascata rigorosa:
 
-# 1. Clonar o repositório
-git clone [https://github.com/mrcoantonioconceicao-ctrl/smart-rust-trading.git](https://github.com/mrcoantonioconceicao-ctrl/smart-rust-trading.git)
-cd smart-rust-trading
+1. **Piso Operacional Fixo:** O capital principal gerido pelo Agente Nolan é mantido estritamente atrelado à base inicial de cinquenta dólares.
+2. **Transbordo Automático de Lucros:** Sempre que as operações geram ganhos que elevam a carteira principal acima de sessenta dólares, o excedente é automaticamente cortado e transferido para uma Carteira de Reserva isolada.
+3. **Spawn Dinâmico por Acumulação:** A cada múltiplo de quinze dólares acumulados na Carteira de Reserva através dos transbordos de lucro, o ecossistema dispara autonomamente um novo sub-agente tático para atuar em paralelo, convertendo os ganhos em poder de fogo operacional.
 
-# 2. Compilar o painel CLI e o ecossistema em Rust
-cargo build --bin sec_cli
+---
 
-# 3. Executar o Painel de Controlo
-cargo run --bin sec_cli
+## Padrão de Segurança e Cibersegurança
 
+Nenhum dado sensível, saldo ou histórico contábil é armazenado de forma legível no armazenamento do dispositivo:
 
-🏛️ Governança
-​Desenvolvido sob rigor de engenharia de alta segurança, arquitetura limpa e rastreabilidade contábil em Rust.
-©️ Marco Antonio Conceicao — Todos os direitos reservados.
+- **Criptografia em Repouso:** Todos os cofres contábeis e registos de ordens são blindados através de criptografia autenticada de 256 bits, exigindo a autenticação por senha mestre do operador para qualquer operação de leitura ou escrita.
+- **Isolamento de Estado:** O mecanismo de persistência garante que falhas de rede ou interrupções abruptas não corrompam o estado financeiro, salvando automaticamente as transações de forma cifrada a cada ciclo.
