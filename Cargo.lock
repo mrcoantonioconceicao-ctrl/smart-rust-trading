@@ -1821,6 +1821,12 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e17592d60ebacc7d5e169f4663c5f84f9161cc90328abcfe8456f41e4dfcb284"
 
 [[package]]
+name = "hex"
+version = "0.4.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7f24254aa9a54b5c858eaee2f5bccdb46aaf0e486a595ed5fd8f86ba55232a70"
+
+[[package]]
 name = "histogram"
 version = "0.6.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3397,16 +3403,16 @@ dependencies = [
 name = "sec_cli"
 version = "0.1.0"
 dependencies = [
- "chrono",
  "clap 4.6.7",
- "sec_binance",
+ "hex",
+ "hmac 0.12.1",
  "sec_crypto",
- "sec_domain",
- "sec_mcp_server",
+ "sec_execution",
  "sec_storage",
  "serde",
  "serde_json",
- "tokio",
+ "sha2 0.10.9",
+ "ureq",
 ]
 
 [[package]]
@@ -5227,6 +5233,24 @@ name = "untrusted"
 version = "0.9.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "8ecb6da28b8a351d773b68d5825ac39017e680750f980f3a1a85cd8dd28a47c1"
+
+[[package]]
+name = "ureq"
+version = "2.9.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f8cdd25c339e200129fe4de81451814e5228c9b771d57378817d6117cc2b3f97"
+dependencies = [
+ "base64 0.21.7",
+ "flate2",
+ "log",
+ "once_cell",
+ "rustls",
+ "rustls-webpki",
+ "serde",
+ "serde_json",
+ "url",
+ "webpki-roots 0.25.4",
+]
 
 [[package]]
 name = "uriparse"

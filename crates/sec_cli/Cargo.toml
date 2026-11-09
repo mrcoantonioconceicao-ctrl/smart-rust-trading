@@ -4,13 +4,13 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-clap = { version = "4.0", features = ["derive"] }
+sec_storage = { path = "../sec_storage" }
+sec_crypto = { path = "../sec_crypto" }
+sec_execution = { path = "../sec_execution" }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
-chrono = { version = "0.4", features = ["serde"] }
-tokio = { version = "1.0", features = ["full"] }
-sec_crypto = { path = "../sec_crypto" }
-sec_storage = { path = "../sec_storage" }
-sec_domain = { path = "../sec_domain" }
-sec_mcp_server = { path = "../sec_mcp_server" }
-sec_binance = { path = "../sec_binance" }
+clap = { version = "4.4", features = ["derive"] }
+ureq = { version = "2.9", features = ["json"] }
+hmac = "0.12"
+sha2 = "0.10"
+hex = "0.4"
