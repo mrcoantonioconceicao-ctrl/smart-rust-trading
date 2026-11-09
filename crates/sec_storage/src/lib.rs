@@ -1,32 +1,68 @@
-use sec_crypto::{encrypt_vault, decrypt_vault};
-use serde::{de::DeserializeOwned, Serialize};
+use std::fs;
+use std::path::Path;
+use std::io::Write;
+use serde::{Serialize, de::DeserializeOwned};
+use sec_crypto::{encrypt_payload, decrypt_payload, CryptoError};
+use thiserror::Error;
+use tempfile::NamedTempFile;
 
-/// Salva e cifrar dados estruturados no cofre local usando o novo motor Argon2id + AES-256-GCM
-pub fn save_secure_vault<T: Serialize>(path: &str, data: &T, password: &[u8]) -> Result<(), String> {
-    let json_bytes = serde_json::to_vec(data)
-        .map_err(|e| format!("Erro ao serializar dados para JSON: {}", e))?;
+#[cfg(unix)]
+use std::os::unix::fs::PermissionsExt;
 
-    let encrypted_data = encrypt_vault(&json_bytes, password)?;
+const MAX_VAULT_FILE_SIZE: u64 = 10 * 1024 * 1024; // 10 MB
 
-    std::fs::write(path, encrypted_data)
-        .map_err(|e| format!("Erro ao gravar cofre no disco ({}): {}", path, e))?;
+#[derive(Error, Debug)]
+pub enum StorageError {
+    #[error("Erro criptográfico: {0}")]
+    Crypto(#[from] CryptoError),
+    #[error("Erro de E/S em disco: {0}")]
+    Io(#[from] std::io::Error),
+    #[error("Cofre não encontrado no caminho especificado")]
+    NotFound,
+    #[error("Arquivo corrompido, vazio ou excede o limite de tamanho permitido")]
+    InvalidFileSize,
+}
 
+pub fn save_secure_vault<T: Serialize>(path: &str, data: &T, password: &[u8]) -> Result<(), StorageError> {
+    let parent_dir = Path::new(path).parent().unwrap_or_else(|| Path::new("."));
+    if !parent_dir.exists() {
+        fs::create_dir_all(parent_dir)?;
+    }
+
+    let aad = path.as_bytes();
+    let encrypted_bytes = encrypt_payload(data, password, aad)?;
+
+    let mut temp_file = NamedTempFile::new_in(parent_dir)?;
+    temp_file.write_all(&encrypted_bytes)?;
+    temp_file.as_file().sync_all()?;
+
+    #[cfg(unix)]
+    {
+        let mut perms = fs::metadata(temp_file.path())?.permissions();
+        perms.set_mode(0o600);
+        fs::set_permissions(temp_file.path(), perms)?;
+    }
+
+    temp_file.persist(path).map_err(|e| e.error)?;
     Ok(())
 }
 
-/// Carrega e decifra dados estruturados do cofre local
-pub fn load_secure_vault<T: DeserializeOwned>(path: &str, password: &[u8]) -> Result<T, String> {
-    if !std::path::Path::new(path).exists() {
-        return Err(format!("Ficheiro de cofre não encontrado: {}", path));
+pub fn load_secure_vault<T: DeserializeOwned>(path: &str, password: &[u8]) -> Result<T, StorageError> {
+    let path_obj = Path::new(path);
+    if !path_obj.exists() {
+        return Err(StorageError::NotFound);
     }
 
-    let encrypted_data = std::fs::read(path)
-        .map_err(|e| format!("Erro ao ler cofre do disco ({}): {}", path, e))?;
+    let metadata = fs::metadata(path_obj)?;
+    let file_size = metadata.len();
 
-    let plaintext = decrypt_vault(&encrypted_data, password)?;
+    if file_size == 0 || file_size > MAX_VAULT_FILE_SIZE {
+        return Err(StorageError::InvalidFileSize);
+    }
 
-    let data: T = serde_json::from_slice(&plaintext)
-        .map_err(|e| format!("Erro ao desserializar JSON do cofre: {}", e))?;
-
+    let encrypted_bytes = fs::read(path_obj)?;
+    let aad = path.as_bytes();
+    
+    let data: T = decrypt_payload(&encrypted_bytes, password, aad)?;
     Ok(data)
 }

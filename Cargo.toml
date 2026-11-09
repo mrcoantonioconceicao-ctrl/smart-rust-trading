@@ -1,10 +1,20 @@
 [workspace]
 members = [
-    "agent",
-    "crates/sec_domain",
+    "crates/sec_crypto",
     "crates/sec_storage",
     "crates/sec_binance",
     "crates/sec_cli",
-    "sec_solana"
+    "crates/sec_domain",
+    "crates/sec_execution",
+    "crates/sec_mcp_server",
+    "sec_solana",
+    "agent"
 ]
 resolver = "2"
+
+[profile.release]
+opt-level = 3
+lto = true
+codegen-units = 1
+panic = "abort"
+strip = true

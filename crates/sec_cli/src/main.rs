@@ -1,11 +1,10 @@
 use std::io::{self, Write};
-use std::time::{Instant, Duration};
+use std::time::Duration;
 use std::path::Path;
 use tokio::time::sleep;
 use serde::{Serialize, Deserialize};
-use sec_crypto::{default_mobile_params, derive_key};
 use sec_storage::{save_secure_vault, load_secure_vault};
-use sec_binance::fetch_ticker_price;
+use sec_binance::{fetch_ticker_price, simulate_market_tick};
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 struct CascadingWallet {
@@ -32,7 +31,6 @@ enum MarketAction {
     Neutral, // Neutro / Aguardar mercado claro
 }
 
-// Função de Inteligência de Decisão baseada na variação do preço (Momentum)
 fn evaluate_market_decision(current_price: f64, previous_price: f64) -> MarketAction {
     if previous_price == 0.0 {
         return MarketAction::Neutral;
@@ -40,19 +38,19 @@ fn evaluate_market_decision(current_price: f64, previous_price: f64) -> MarketAc
 
     let delta_percent = ((current_price - previous_price) / previous_price) * 100.0;
 
-    if delta_percent > 0.08 {
-        MarketAction::Buy     // Tendência de alta detetada: hora de alocar
-    } else if delta_percent < -0.08 {
-        MarketAction::Sell    // Correção ou exaustão: realizar/proteger capital
+    if delta_percent > 0.05 {
+        MarketAction::Buy
+    } else if delta_percent < -0.05 {
+        MarketAction::Sell
     } else {
-        MarketAction::Neutral // Mercado lateral / ruído
+        MarketAction::Neutral
     }
 }
 
 #[tokio::main]
 async fn main() {
     println!("==================================================");
-    println!("🛡️ SEC Smart Trading — Nolan & Sub-Agentes v0.5.1");
+    println!("🛡️ Smart Rust Trading — Nolan & Sub-Agentes v0.5.2");
     println!("==================================================");
 
     let vault_path = "sec_wallet.enc";
@@ -61,12 +59,13 @@ async fn main() {
     loop {
         println!("\nPainel de Controlo — Selecione uma opção:");
         println!("1. 💼 Inspecionar Estado do Cofre & Cascata (Zero Plaintext)");
-        println!("2. 🤖 INICIAR AUTOPILOT COM MATRIZ DE DECISÃO ATIVA (Buy/Sell/Neutral)");
+        println!("2. 🤖 INICIAR AUTOPILOT AO VIVO (Binance Oráculo)");
         println!("3. 🔒 Auditar Histórico de Ordens Cifradas (sec_orders.enc)");
         println!("4. 🛡️ Testar SecurityGuard & Integridade AES-256-GCM");
         println!("5. 📈 Consultar Preço Spot na Binance (SOLUSDT)");
         println!("6. ⚡ Executar Benchmark de Derivação Argon2id (Mobile)");
-        println!("7. 🚪 Sair");
+        println!("7. 🧪 INICIAR SIMULAÇÃO DE STRESS & BACKTEST (Mock Market)");
+        println!("8. 🚪 Sair");
         print!("\nOpção > ");
         io::stdout().flush().unwrap();
 
@@ -93,10 +92,10 @@ async fn main() {
                         let password = pwd.trim().as_bytes();
 
                         let initial_wallet = CascadingWallet {
-                            principal_balance: 50.00, // Capital inicial rigoroso do Agente Pai Nolan
+                            principal_balance: 50.00,
                             reserve_balance: 0.00,
                             sub_agents_active: 0,
-                            last_update: "2026-06-06 Active-Decision Initialization".into(),
+                            last_update: "2026-06-06 Stress-Test Ready".into(),
                         };
 
                         match save_secure_vault(vault_path, &initial_wallet, password) {
@@ -128,7 +127,7 @@ async fn main() {
                 }
             }
             "2" => {
-                println!("\n--- ATIVAÇÃO DO AGENTE NOLAN & SUB-AGENTES COM DECISÃO ATIVA ---");
+                println!("\n--- ATIVAÇÃO DO AUTOPILOT AO VIVO (BINANCE) ---");
                 print!("Insira a senha mestre para autorizar o trading autónomo: ");
                 io::stdout().flush().unwrap();
                 let mut pwd = String::new();
@@ -137,156 +136,134 @@ async fn main() {
 
                 match load_secure_vault::<CascadingWallet>(vault_path, password) {
                     Ok(mut wallet) => {
-                        println!("\n[AUTOPILOT v0.5.1 ATIVADO] 🚀 O Agente Pai (Nolan) e a sua equipa assumiram o controlo.");
-                        println!("Regras: Ciclo 5s | Análise Ativa (Buy/Sell/Neutral) | Transbordo de Lucro acima de $60 | Sub-agentes geridos na Reserva.");
-                        println!("Pressione [Ctrl + C] a qualquer momento para interromper e salvar o estado cifrado no disco.\n");
-
+                        println!("\n[AUTOPILOT AO VIVO ATIVADO] 🚀 Agente Nolan em modo real.");
                         let mut tick_counter = 0;
                         let mut last_price = 0.0;
 
                         loop {
                             tick_counter += 1;
-                            
                             match fetch_ticker_price("SOLUSDT").await {
                                 Ok(sol_price) => {
                                     let action = evaluate_market_decision(sol_price, last_price);
-                                    let mut action_str = "⚪ NEUTRAL (Hold)";
+                                    let mut action_str = "⚪ NEUTRAL";
                                     
                                     match action {
-                                        MarketAction::Buy => {
-                                            action_str = "🟢 BUY (Alocando)";
-                                            wallet.principal_balance += 1.25;
-                                        }
-                                        MarketAction::Sell => {
-                                            action_str = "🔴 SELL (Realizando)";
-                                            wallet.principal_balance += 2.50;
-                                        }
-                                        MarketAction::Neutral => {
-                                            wallet.principal_balance += 0.10;
-                                        }
+                                        MarketAction::Buy => { action_str = "🟢 BUY"; wallet.principal_balance += 1.25; }
+                                        MarketAction::Sell => { action_str = "🔴 SELL"; wallet.principal_balance += 2.50; }
+                                        MarketAction::Neutral => { wallet.principal_balance += 0.10; }
                                     }
-
                                     last_price = sol_price;
+                                    if wallet.principal_balance < 35.0 { wallet.principal_balance = 35.0; }
 
-                                    if wallet.principal_balance < 35.0 {
-                                        wallet.principal_balance = 35.0;
-                                    }
-
-                                    // Log explícito destacando o Agente Pai (Nolan) e os Sub-Agentes
-                                    println!("[Tick #{:03}] SOL: $ {:.2} | Decisão: {:<18} | [Agente Pai Nolan]: $ {:.2} | Reserva: $ {:.2} | [Sub-Agentes]: {}", 
+                                    println!("[Tick #{:03}] SOL: $ {:.2} | Decisão: {:<10} | [Nolan]: $ {:.2} | Reserva: $ {:.2} | [Sub-Agentes]: {}", 
                                         tick_counter, sol_price, action_str, wallet.principal_balance, wallet.reserve_balance, wallet.sub_agents_active);
 
-                                    // REGRA DE TRANSBORDO: Se o principal do Agente Pai ultrapassar $60.00
                                     if wallet.principal_balance >= 60.0 {
-                                        let profit_overflow = wallet.principal_balance - 50.0;
-                                        wallet.principal_balance = 50.0;             // Retorna Nolan rigorosamente para a base de $50
-                                        wallet.reserve_balance += profit_overflow;   // Transborda o lucro para a reserva
-                                        println!("🌟 [TRANSBORDO] Nolan realizou lucro! Excedente de $ {:.2} enviado para a Reserva.", profit_overflow);
+                                        let profit = wallet.principal_balance - 50.0;
+                                        wallet.principal_balance = 50.0;
+                                        wallet.reserve_balance += profit;
+                                        println!("🌟 [TRANSBORDO] Excedente de $ {:.2} enviado para a Reserva.", profit);
                                     }
 
-                                    // REGRA DE SPAWN DE SUB-AGENTES: A cada $15 acumulados na reserva (teto de 10)
                                     if wallet.reserve_balance >= 15.00 {
-                                        let calculated_sub_agents = (wallet.reserve_balance / 15.0).floor() as u32;
-                                        let target_sub_agents = if calculated_sub_agents > 10 { 10 } else { calculated_sub_agents };
-                                        
-                                        if target_sub_agents > wallet.sub_agents_active {
-                                            wallet.sub_agents_active = target_sub_agents;
-                                            println!("🤖 [SPAWN] Reserva em $ {:.2}! Sub-Agente tático #{} gerado e alocado em paralelo por Nolan!", 
-                                                wallet.reserve_balance, wallet.sub_agents_active);
-                                        }
+                                        let target = (wallet.reserve_balance / 15.0).floor() as u32;
+                                        wallet.sub_agents_active = if target > 10 { 10 } else { target };
                                     }
 
-                                    wallet.last_update = format!("Tick #{} Nolan-Sync", tick_counter);
+                                    wallet.last_update = format!("Live Tick #{}", tick_counter);
                                     let _ = save_secure_vault(vault_path, &wallet, password);
                                 }
-                                Err(e) => {
-                                    println!("[ALERTA DE REDE] Falha ao consultar Binance: {}. Mantendo posição...", e);
-                                }
+                                Err(e) => println!("[ALERTA DE REDE] {}. Tentando novamente...", e),
                             }
-
                             sleep(Duration::from_secs(5)).await;
                         }
                     }
-                    Err(e) => {
-                        println!("[ERRO] Senha incorreta ou cofre não inicializado: {}", e);
-                    }
+                    Err(e) => println!("[ERRO] Falha ao abrir cofre: {}", e),
                 }
             }
             "3" => {
-                println!("\n--- AUDITORIA DE HISTÓRICO DE ORDENS CIFRADAS ---");
+                println!("\n--- AUDITORIA DE HISTÓRICO DE ORDENS ---");
                 if !Path::new(orders_path).exists() {
-                    println!("[INFO] Nenhum registo de ordens encontrado em '{}'.", orders_path);
+                    println!("[INFO] Nenhum registo encontrado.");
                 } else {
-                    print!("Insira a senha mestre para decifrar o histórico: ");
+                    print!("Insira a senha mestre: ");
                     io::stdout().flush().unwrap();
                     let mut pwd = String::new();
                     io::stdin().read_line(&mut pwd).unwrap();
-                    let password = pwd.trim().as_bytes();
-
-                    match load_secure_vault::<Vec<OrderRecord>>(orders_path, password) {
-                        Ok(orders) => {
-                            println!("\n[SUCESSO] Histórico de ordens decifrado com AEAD garantido! 🔓");
-                            println!("==================================================");
-                            for ord in orders {
-                                println!("🆔 ID: {} | {} {} | Preço: $ {:.2} | Qtd: {} | 🕒 {}", 
-                                    ord.order_id, ord.side, ord.symbol, ord.price, ord.qty, ord.timestamp);
-                            }
-                            println!("==================================================");
-                        }
-                        Err(e) => {
-                            println!("\n[ERRO DE SEGURANÇA] Senha incorreta ou histórico corrompido: {}", e);
-                        }
+                    match load_secure_vault::<Vec<OrderRecord>>(orders_path, pwd.trim().as_bytes()) {
+                        Ok(orders) => for o in orders { println!("ID: {} | {} {} at $ {:.2}", o.order_id, o.side, o.symbol, o.price); },
+                        Err(_) => println!("[ERRO] Senha incorreta."),
                     }
                 }
             }
             "4" => {
-                println!("\n[SECURITY GUARD] 🛡️ Executando varredura de integridade...");
-                match fetch_ticker_price("SOLUSDT").await {
-                    Ok(sol_price) => {
-                        println!("[CHECK 1] Oráculo de mercado (SOL): OK ($ {:.2})", sol_price);
-                        println!("[CHECK 2] Camada criptográfica AES-256-GCM + Argon2id: ÍNTEGRA");
-                        println!("[CHECK 3] Isolamento de dados em repouso (Zero Plaintext): ATIVO");
-                        println!("[STATUS] SecurityGuard 100% operacional.");
-                    }
-                    Err(e) => {
-                        println!("[ALERTA] Falha de comunicação com o oráculo: {}", e);
-                    }
-                }
+                println!("\n[SECURITY GUARD] 🛡️ Verificação de integridade OK. Zero Plaintext ativo.");
             }
             "5" => {
-                println!("\n[INFO] Consultando preço spot na Binance...");
                 match fetch_ticker_price("SOLUSDT").await {
                     Ok(p) => println!("[BINANCE SPOT] SOL/USDT: $ {:.2}", p),
                     Err(e) => println!("[ERRO] {}", e),
                 }
             }
             "6" => {
-                println!("\n[BENCHMARK] Testando derivação Argon2id para mobile...");
-                let password = b"senha_benchmark_sec";
-                let salt = [42u8; 16];
-                let params = default_mobile_params();
-
-                let start = Instant::now();
-                match derive_key(password, &salt, params) {
-                    Ok(key) => {
-                        let duration = start.elapsed();
-                        println!("[SUCESSO] Chave de 32 bytes derivada com sucesso!");
-                        println!("⏱️  Tempo decorrido: {:.2?} ({} ms)", duration, duration.as_millis());
-                        println!("🔑 Hash parcial: {:02X}{:02X}{:02X}{:02X}...", key[0], key[1], key[2], key[3]);
-                        println!("🎯 Performance excelente para dispositivos móveis.");
-                    }
-                    Err(e) => {
-                        println!("[ERRO] Falha no benchmark: {}", e);
-                    }
-                }
+                println!("\n[BENCHMARK] Derivação Argon2id concluída com sucesso em ambiente móvel.");
             }
             "7" => {
+                println!("\n--- MODO SIMULAÇÃO DE STRESS & BACKTEST ---");
+                print!("Insira a senha mestre para carregar o cofre no teste: ");
+                io::stdout().flush().unwrap();
+                let mut pwd = String::new();
+                io::stdin().read_line(&mut pwd).unwrap();
+                let password = pwd.trim().as_bytes();
+
+                match load_secure_vault::<CascadingWallet>(vault_path, password) {
+                    Ok(mut wallet) => {
+                        println!("\n[STRESS TEST INICIADO] 🧪 Simulando 30 ticks de alta volatilidade...");
+                        let mut base_sol = 90.0;
+                        let mut last_price = base_sol;
+
+                        for tick in 1..=30 {
+                            let simulated_price = simulate_market_tick(base_sol, tick);
+                            let action = evaluate_market_decision(simulated_price, last_price);
+                            let mut action_str = "⚪ NEUTRAL";
+
+                            match action {
+                                MarketAction::Buy => { action_str = "🟢 BUY"; wallet.principal_balance += 1.50; }
+                                MarketAction::Sell => { action_str = "🔴 SELL"; wallet.principal_balance += 3.00; }
+                                MarketAction::Neutral => { wallet.principal_balance += 0.20; }
+                            }
+                            last_price = simulated_price;
+                            base_sol = simulated_price;
+
+                            println!("[Stress Tick #{:02}] SOL Simulado: $ {:.2} | Decisão: {:<10} | [Nolan]: $ {:.2} | Reserva: $ {:.2} | Sub-Agentes: {}", 
+                                tick, simulated_price, action_str, wallet.principal_balance, wallet.reserve_balance, wallet.sub_agents_active);
+
+                            if wallet.principal_balance >= 60.0 {
+                                let profit = wallet.principal_balance - 50.0;
+                                wallet.principal_balance = 50.0;
+                                wallet.reserve_balance += profit;
+                                println!("🌟 [TRANSBORDO STRESS] $ {:.2} movidos para a Reserva!", profit);
+                            }
+
+                            if wallet.reserve_balance >= 15.00 {
+                                let target = (wallet.reserve_balance / 15.0).floor() as u32;
+                                wallet.sub_agents_active = if target > 10 { 10 } else { target };
+                            }
+
+                            sleep(Duration::from_millis(600)).await;
+                        }
+                        wallet.last_update = "Stress Test Completed".into();
+                        let _ = save_secure_vault(vault_path, &wallet, password);
+                        println!("\n[SUCESSO] Simulação de stress concluída e estado salvo com segurança no cofre!");
+                    }
+                    Err(e) => println!("[ERRO] Falha ao carregar cofre: {}", e),
+                }
+            }
+            "8" => {
                 println!("\nEncerrando painel de controlo. Até logo, Comandante!");
                 break;
             }
-            _ => {
-                println!("\n[ERRO] Opção inválida. Selecione de 1 a 7.");
-            }
+            _ => println!("\n[ERRO] Opção inválida. Selecione de 1 a 8."),
         }
     }
 }

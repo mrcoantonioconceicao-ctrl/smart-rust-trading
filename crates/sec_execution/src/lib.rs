@@ -1,25 +1,16 @@
-use sec_domain::{TradeOrder, SecurityGuard};
-use tokio::sync::mpsc;
+// Crate sec_execution - Execução segura de ordens e validação tática
 
-pub struct ExecutionEngine {
-    tx: mpsc::Sender<TradeOrder>,
-}
+pub struct ExecutionManager;
 
-impl ExecutionEngine {
-    pub fn new(buffer_size: usize) -> (Self, mpsc::Receiver<TradeOrder>) {
-        let (tx, rx) = mpsc::channel(buffer_size);
-        (Self { tx }, rx)
+impl ExecutionManager {
+    pub fn new() -> Self {
+        Self
     }
 
-    pub async fn submit_order(&self, order: TradeOrder) -> Result<(), &'static str> {
-        // Validação defensiva de segurança antes de enfileirar a ordem
-        SecurityGuard::validate_market_input(&order.symbol, 100.0, "Secure Execution Check")?;
-        
-        self.tx.send(order).await.map_err(|_| "[SEC-ERROR] Falha ao enviar ordem pelo canal SOA.")?;
-        Ok(inspect_order_dispatch())
+    pub fn validate_and_execute(&self, _symbol: &str, amount: f64) -> Result<(), String> {
+        if amount <= 0.0 {
+            return Err("Montante de execução inválido ou zero".to_string());
+        }
+        Ok(())
     }
-}
-
-fn inspect_order_dispatch() {
-    println!("[SOA-EXECUTION] Ordem validada e encaminhada com segurança para o motor on-chain.");
 }
