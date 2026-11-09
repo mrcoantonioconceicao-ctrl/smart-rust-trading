@@ -7,6 +7,8 @@ edition = "2021"
 sec_storage = { path = "../sec_storage" }
 sec_crypto = { path = "../sec_crypto" }
 sec_execution = { path = "../sec_execution" }
+sec_ast = { path = "../sec_ast" }
+sec_ai = { path = "../sec_ai" }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 clap = { version = "4.4", features = ["derive"] }

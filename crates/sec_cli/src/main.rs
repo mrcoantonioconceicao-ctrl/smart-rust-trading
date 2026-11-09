@@ -3,6 +3,8 @@ use std::thread;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 use sec_storage::{save_secure_vault, load_secure_vault};
 use sec_crypto::{derive_key, secure_mobile_params};
+use sec_ast::{AstNode, AstEvaluator};
+use sec_ai::OllamaBridge;
 use serde::{Serialize, Deserialize};
 use hmac::{Hmac, Mac};
 use sha2::Sha256;
@@ -71,10 +73,10 @@ fn fetch_testnet_account_balance(api_key: &str, secret_key: &str) -> Result<Stri
     let mut result_summary = String::new();
     if let Some(balances) = body["balances"].as_array() {
         for asset in balances {
-            if let (Some(asset_name), Some(free), Some(locked)) = (asset["asset"].as_str(), asset["free"].as_str(), asset["locked"].as_str()) {
+            if let (Some(asset_name), Some(free), Some(_locked)) = (asset["asset"].as_str(), asset["free"].as_str(), asset["locked"].as_str()) {
                 let free_val: f64 = free.parse().unwrap_or(0.0);
                 if free_val > 0.0 || asset_name == "USDT" || asset_name == "SOL" {
-                    result_summary.push_str(&format!("\n   - Ativo: {} | Livre: {} | Bloqueado: {}", asset_name, free, locked));
+                    result_summary.push_str(&format!("\n   - Ativo: {} | Livre: {}", asset_name, free));
                 }
             }
         }
@@ -119,18 +121,19 @@ fn main() {
 
     loop {
         println!("\n==================================================");
-        println!("🛡️ Smart Rust Trading — Nolan & Sub-Agentes v0.5.2");
+        println!("🛡️ Smart Rust Trading — Nolan & Sub-Agentes v0.6.0");
         println!("==================================================");
         println!("Painel de Controlo — Selecione uma opção:");
         println!("1. 💼 Inspecionar Estado do Cofre & Cascata (Zero Plaintext)");
-        println!("2. 🤖 INICIAR AUTOPILOT AO VIVO (Binance Testnet Real Execution Refinado)");
+        println!("2. 🤖 INICIAR AUTOPILOT AO VIVO (Binance Testnet Real Execution)");
         println!("3. 🔒 Auditar Histórico de Ordens Cifradas (sec_orders.enc)");
         println!("4. 🛡️ Testar SecurityGuard & Integridade AES-256-GCM");
         println!("5. 📈 Consultar Preço Spot na Binance Testnet (SOLUSDT)");
         println!("6. ⚡ Executar Benchmark de Derivação Argon2id (Mobile)");
         println!("7. 🧪 INICIAR SIMULAÇÃO DE STRESS & BACKTEST (Mock Market)");
         println!("8. 💰 Consultar Saldo Real da Conta na Binance Testnet");
-        println!("9. 🚪 Sair");
+        println!("9. 🤖 Conversar com o Agente Nolan via IA Local & AST");
+        println!("10. 🚪 Sair");
         
         let choice = prompt("\nOpção > ");
 
@@ -147,7 +150,7 @@ fn main() {
                             principal: 50.0,
                             reserve: 0.0,
                             sub_agents: 0,
-                            last_sync: "2026-06-06 Testnet-BalanceAdded".to_string(),
+                            last_sync: "2026-06-06 AST-AI-Integrated".to_string(),
                             binance_api_key: "4AWMxcdGMnshi1a135e1yyTMF6e1XzNsUAl6yu3hESpWwMpYv28ODRvBG8DtpEBu".to_string(),
                             binance_secret_key: "HP4OAsS9T5xG0iWKXBCA7QU6cTjG8taMQjQzWF81HRASABEOtkpBuU6Hm8KaECvi".to_string(),
                         };
@@ -178,7 +181,7 @@ fn main() {
                 let password = prompt("Insira a senha mestre para autorizar o trading autónomo: ");
                 match load_secure_vault::<VaultData>(vault_path, password.as_bytes()) {
                     Ok(mut data) => {
-                        println!("\n[AUTOPILOT TESTNET REFINADO] 🚀 Agente Nolan conectado à Binance Spot Testnet.");
+                        println!("\n[AUTOPILOT TESTNET] 🚀 Agente Nolan conectado à Binance Spot Testnet.");
                         
                         let mut last_price = match fetch_binance_price() {
                             Ok(p) => p,
@@ -284,11 +287,35 @@ fn main() {
                 }
             }
             "9" => {
+                println!("\n--- CHAT COM AGENTE NOLAN (OLLAMA LOCAL + AST) ---");
+                let model_name = prompt("Insira o nome do modelo local Ollama (ex: llama3, mistral): ");
+                let user_msg = prompt("Escreva o seu comando em linguagem natural para o Agente Nolan: ");
+                
+                println!("[OLLAMA] A traduzir intenção localmente via '{}'...", model_name);
+                let bridge = OllamaBridge::new(&model_name);
+                
+                match bridge.translate_intent_to_ast(&user_msg) {
+                    Ok(node) => {
+                        println!("[SUCESSO IA] Intenção convertida com sucesso em nó AST estruturado:");
+                        println!("{:#?}", node);
+
+                        // Testar a avaliação determinística do AST com o preço atual de mercado
+                        if let Ok(current_price) = fetch_binance_price() {
+                            match AstEvaluator::evaluate(&node, current_price) {
+                                Ok(res) => println!("[AST AVALIAÇÃO DETERMINÍSTICA] Resultado da regra com SOL a $ {:.2}: {}", current_price, res),
+                                Err(e) => println!("[ERRO AST] Falha ao avaliar nó: {}", e),
+                            }
+                        }
+                    }
+                    Err(e) => println!("[ERRO DE TRADUÇÃO IA] Certifique-se de que a Ollama está a correr localmente. Detalhes: {:?}", e),
+                }
+            }
+            "10" => {
                 println!("\nEncerrando painel de controlo. Até breve, Comandante! 🛡️");
                 break;
             }
             _ => {
-                println!("\n[AVISO] Opção inválida. Selecione um número de 1 a 9.");
+                println!("\n[AVISO] Opção inválida. Selecione um número de 1 a 10.");
             }
         }
     }

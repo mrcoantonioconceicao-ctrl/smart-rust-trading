@@ -1,0 +1,10 @@
+[package]
+name = "sec_ai"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+sec_ast = { path = "../sec_ast" }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+ureq = { version = "2.9", features = ["json"] }
