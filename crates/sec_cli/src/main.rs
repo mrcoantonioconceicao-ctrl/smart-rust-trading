@@ -32,8 +32,24 @@ fn main() {
 
         match choice {
             "1" => {
-                println!("[1] Inspecionando Cofre & Cascata...");
-                println!("🔒 Cofre validado: Contabilidade multi-ativo isolada (BTC + ETH).");
+                let files = ["../../sec_wallet.enc", "../../sec_reserve.enc"];
+                for path in files {
+                    let start = std::time::Instant::now();
+                    let data = match std::fs::read(path) {
+                        Ok(bytes) => bytes,
+                        Err(e) => {
+                            println!("Erro ao ler {}: {}", path, e);
+                            continue;
+                        }
+                    };
+                    let xor: u8 = data.iter().fold(0u8, |acc, &b| acc ^ b);
+                    let elapsed = start.elapsed();
+                    println!("Caminho: {}", path);
+                    println!("Total de bytes lidos: {}", data.len());
+                    println!("Checksum XOR: {:02x}", xor);
+                    println!("Tempo decorrido: {:?}", elapsed);
+                    println!("------------------------------");
+                }
             }
             "2" => {
                 println!("[2] A iniciar Nolan Engine orientada a eventos (WebSocket + Indicadores)...");

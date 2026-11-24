@@ -1,1 +1,14 @@
 target/
+
+# Ficheiros sensíveis — nunca commite no controlo de versões
+*.enc
+*.tmp*
+.sec_*
+sec_wallet.enc
+sec_reserve.enc
+agent.log
+*.log
+.vault/
+.secrets/
+.env
+.env.*

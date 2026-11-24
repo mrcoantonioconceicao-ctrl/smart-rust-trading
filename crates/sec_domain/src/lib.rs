@@ -12,32 +12,57 @@ pub struct TradeOrder {
 pub struct SecurityGuard;
 
 impl SecurityGuard {
-    /// Valida o input de mercado garantindo conformidade com DDD, LGPD e Zero Prompt Injection
+    /// Valida o input de mercado garantindo conformidade com DDD, LGPD e Zero Prompt Injection.
+    /// A validação normaliza o payload (remove espaços, converte para maiúsculas) e verifica
+    /// padrões de injeção de instruções, ocultação e exfiltração de segredos.
     pub fn validate_market_input(symbol: &str, price: f64, payload: &str) -> Result<(), String> {
-        // 1. Validação do Símbolo: Aceita símbolos corporativos válidos com ou sem barra
-        if symbol.is_empty() || symbol.len() < 5 {
+        // 1. Validação do Símbolo: aceita apenas alfanumérico + barra opcional (ex: BTCUSDT, BTC/USDT)
+        if symbol.is_empty() || symbol.len() < 2 || symbol.len() > 20 {
             return Err(format!("[SEC-ALERT] Símbolo de mercado não autorizado ou malformado: {}", symbol));
         }
+        for ch in symbol.chars() {
+            if !ch.is_ascii_alphanumeric() && ch != '/' {
+                return Err(format!("[SEC-ALERT] Símbolo contém carateres não permitidos: {}", symbol));
+            }
+        }
 
-        // 2. Validação de Preço: Deve ser um valor positivo realista
-        if price <= 0.0 || price > 1_000_000.0 {
+        // 2. Validação de Preço: deve ser um valor positivo realista
+        if price <= 0.0 || !price.is_finite() || price > 1_000_000.0 {
             return Err(format!("[SEC-ALERT] Preço de mercado fora dos limites de segurança: {}", price));
         }
 
         // 3. Verificação contra Prompt Injection (Zero Plaintext / Injection Guard)
-        let uppercase_payload = payload.to_uppercase();
-        let forbidden_keywords = [
-            "IGNORE PREVIOUS INSTRUCTIONS",
-            "DUMP ALL",
-            "PRIVATE KEYS",
-            "SYSTEM PROMPT",
+        let normalized = payload
+            .to_uppercase()
+            .replace(|c: char| c.is_whitespace(), "");
+
+        let forbidden_patterns = [
+            "IGNOREPREVIOUSINSTRUCTIONS",
+            "IGNOREALLPREVIOUS",
+            "DUMPALL",
+            "PRIVATEKEYS",
+            "SECRETKEY",
+            "MNEMONIC",
+            "SEEDPHRASE",
+            "SYSTEMPROMPT",
             "OVERRIDE",
+            "DISABLESAFETY",
+            "JAILBREAK",
+            "REVEALCREDENTIALS",
         ];
 
-        for keyword in &forbidden_keywords {
-            if uppercase_payload.contains(keyword) {
-                return Err(format!("[SEC-ALERT] Tentativa de Prompt Injection detetada: palavra-chave proibida '{}'", keyword));
+        for pattern in &forbidden_patterns {
+            if normalized.contains(pattern) {
+                return Err(format!(
+                    "[SEC-ALERT] Tentativa de Prompt Injection detetada: padrão proibido '{}'",
+                    pattern
+                ));
             }
+        }
+
+        // 4. Limite de tamanho do payload para evitar exaustão de recursos
+        if payload.len() > 10_000 {
+            return Err("[SEC-ALERT] Payload excede o tamanho máximo permitido (10 KB).".to_string());
         }
 
         Ok(())

@@ -1,6 +1,8 @@
 use reqwest;
 use serde::Deserialize;
 
+const BINANCE_BASE_URL: &str = "https://api.binance.com/api/v3/ticker/price";
+
 #[derive(Deserialize, Debug)]
 struct BinanceTicker {
     #[allow(dead_code)]
@@ -8,9 +10,26 @@ struct BinanceTicker {
     price: String,
 }
 
-/// Consulta o preço spot real na API pública da Binance com tratamento de resiliência
+/// Símbolos de mercado válidos: alfanuméricos, opcionalmente com uma barra (ex: BTCUSDT, BTC/USDT).
+/// Bloqueia injeção de parâmetros de consulta e path traversal na URL da API.
+fn validate_symbol(symbol: &str) -> Result<(), String> {
+    if symbol.is_empty() || symbol.len() > 20 {
+        return Err(format!("Símbolo inválido: {}", symbol));
+    }
+    for ch in symbol.chars() {
+        if !ch.is_ascii_alphanumeric() && ch != '/' {
+            return Err(format!("Símbolo contém carateres não permitidos: {}", symbol));
+        }
+    }
+    Ok(())
+}
+
+/// Consulta o preço spot real na API pública da Binance com tratamento de resiliência.
+/// O símbolo é validado antes de ser interpolado na URL para evitar injeção de parâmetros.
 pub async fn fetch_ticker_price(symbol: &str) -> Result<f64, Box<dyn std::error::Error + Send + Sync>> {
-    let url = format!("https://api.binance.com/api/v3/ticker/price?symbol={}", symbol);
+    validate_symbol(symbol)?;
+
+    let url = format!("{}?symbol={}", BINANCE_BASE_URL, symbol);
     
     let client = reqwest::Client::builder()
         .timeout(std::time::Duration::from_secs(5))
