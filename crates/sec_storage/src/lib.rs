@@ -1,5 +1,5 @@
 use std::fs;
-use std::path::Path;
+use std::path::{Component, Path, PathBuf};
 use std::io::Write;
 use serde::{Serialize, de::DeserializeOwned};
 use sec_crypto::{encrypt_payload, decrypt_payload, CryptoError};
@@ -21,10 +21,49 @@ pub enum StorageError {
     NotFound,
     #[error("Arquivo corrompido, vazio ou excede o limite de tamanho permitido")]
     InvalidFileSize,
+    #[error("Caminho do ficheiro inválido ou inseguro: {0}")]
+    InvalidPath(String),
+}
+
+/// Valida o caminho do ficheiro de cofre para impedir path traversal,
+/// caminhos absolutos e componentes perigosos.
+fn validate_vault_path(path: &str) -> Result<PathBuf, StorageError> {
+    if path.is_empty() {
+        return Err(StorageError::InvalidPath("caminho vazio".to_string()));
+    }
+
+    let path_obj = Path::new(path);
+
+    // Rejeita caminhos absolutos
+    if path_obj.is_absolute() {
+        return Err(StorageError::InvalidPath(format!("caminho absoluto não permitido: {}", path)));
+    }
+
+    // Rejeita componentes perigosos ("..", raiz, prefixo)
+    for component in path_obj.components() {
+        match component {
+            Component::ParentDir => {
+                return Err(StorageError::InvalidPath(format!("path traversal detetado: {}", path)));
+            }
+            Component::CurDir => {}
+            Component::Normal(_) => {}
+            Component::RootDir | Component::Prefix(_) => {
+                return Err(StorageError::InvalidPath(format!("componente de raiz/prefixo não permitido: {}", path)));
+            }
+        }
+    }
+
+    if path.len() > 4096 {
+        return Err(StorageError::InvalidPath("caminho excede o limite máximo".to_string()));
+    }
+
+    Ok(path_obj.to_path_buf())
 }
 
 pub fn save_secure_vault<T: Serialize>(path: &str, data: &T, password: &[u8]) -> Result<(), StorageError> {
-    let parent_dir = Path::new(path).parent().unwrap_or_else(|| Path::new("."));
+    let path_obj = validate_vault_path(path)?;
+
+    let parent_dir = path_obj.parent().unwrap_or_else(|| Path::new("."));
     if !parent_dir.exists() {
         fs::create_dir_all(parent_dir)?;
     }
@@ -43,7 +82,7 @@ pub fn save_secure_vault<T: Serialize>(path: &str, data: &T, password: &[u8]) ->
         fs::set_permissions(temp_file.path(), perms)?;
     }
 
-    temp_file.persist(path).map_err(|e| e.error)?;
+    temp_file.persist(&path_obj).map_err(|e| e.error)?;
     Ok(())
 }
 

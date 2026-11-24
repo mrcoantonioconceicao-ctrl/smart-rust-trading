@@ -7,4 +7,9 @@ members = [
     "crates/sec_ast",
     "crates/sec_ai"
 ]
+exclude = [
+    "agent",
+    "sec_solana",
+    "programs/smart_vault"
+]
 resolver = "2"
